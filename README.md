@@ -36,6 +36,10 @@ This configuration file allows to choose the service that will be used for place
 
 Sets the initial placement algorithm used by Causa placement service.
 
-    algorithm = NONE, BEST_FIT, MOLPRO_BEST_FIT, LOAD_BALANCING_RAM, CONSOLIDATION_RAM, CONSOLIDATION, FRAGMENTATION, ENERGY_EFFICIENCY
+    algorithm = NONE, BEST_FIT,
+    LOAD_BALANCING_RAM, CONSOLIDATION_RAM, CONSOLIDATION, FRAGMENTATION, ENERGY_EFFICIENCY,
+    MOLPRO_BEST_FIT, MOLPRO_LOAD_BALANCING_RAM, MOLPRO_CONSOLIDATION_RAM
 
 The description of the placement algorithms is provided in D3.3 Extended Optimization Model (http://www.cactosfp7.eu/wp-content/uploads/2015/11/D3.3-Extended-Optimization-Model.pdf/ pp. 36--45).
+
+MOLPRO_* placement algorithms are aware of special requirements of Molpro jobs depending on the application type (e.g., dft jobs require a computational node with a local storage).
