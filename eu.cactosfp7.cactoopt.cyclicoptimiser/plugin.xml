@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?eclipse version="3.4"?>
+<plugin>
+
+   <extension
+         id="product"
+         point="org.eclipse.core.runtime.products">
+      <product
+            application="org.eclipse.ui.ide.workbench"
+            name="Cyclic Optimiser Product">
+         <property
+               name="appName"
+               value="Cyclic Optimiser Product">
+         </property>
+      </product>
+   </extension>
+
+</plugin>

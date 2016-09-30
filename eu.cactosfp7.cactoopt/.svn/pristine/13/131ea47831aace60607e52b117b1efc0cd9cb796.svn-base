@@ -1,0 +1,399 @@
+package eu.cactosfp7.cactoopt.util;
+
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+import java.util.logging.Logger;
+
+import eu.cactosfp7.cactoopt.framework.model.MigrationMove;
+import eu.cactosfp7.cactoopt.framework.model.exceptions.PlacementException;
+import eu.cactosfp7.cactoopt.models.PhysicalMachine;
+import eu.cactosfp7.infrastructuremodels.load.physical.PhysicalLoadModel;
+import eu.cactosfp7.infrastructuremodels.load.physical.StorageMeasurement;
+import eu.cactosfp7.infrastructuremodels.logicaldc.core.Hypervisor;
+import eu.cactosfp7.infrastructuremodels.logicaldc.core.LogicalDCModel;
+import eu.cactosfp7.infrastructuremodels.logicaldc.core.VM_State;
+import eu.cactosfp7.infrastructuremodels.logicaldc.core.VirtualMachine;
+import eu.cactosfp7.infrastructuremodels.logicaldc.core.VirtualMemory;
+import eu.cactosfp7.infrastructuremodels.logicaldc.core.VirtualProcessingUnit;
+import eu.cactosfp7.infrastructuremodels.physicaldc.core.AbstractNode;
+import eu.cactosfp7.infrastructuremodels.physicaldc.core.ComputeNode;
+import eu.cactosfp7.infrastructuremodels.physicaldc.core.MemorySpecification;
+import eu.cactosfp7.infrastructuremodels.physicaldc.core.NodeState;
+import eu.cactosfp7.infrastructuremodels.physicaldc.core.PhysicalDCModel;
+import eu.cactosfp7.infrastructuremodels.physicaldc.core.ProcessingUnitSpecification;
+import eu.cactosfp7.infrastructuremodels.physicaldc.core.Rack;
+import eu.cactosfp7.infrastructuremodels.physicaldc.core.StorageSpecification;
+import eu.cactosfp7.optimisationplan.ExecutionStatus;
+import eu.cactosfp7.optimisationplan.OptimisationPlan;
+import eu.cactosfp7.optimisationplan.OptimisationplanFactory;
+import eu.cactosfp7.optimisationplan.SequentialSteps;
+import eu.cactosfp7.optimisationplan.VmMigrationAction;
+import eu.cactosfp7.optimisationplan.VmPlacementAction;
+
+/**
+ * Class with methods for handling CDO models and transforming them into simplified model
+ * @author jakub
+ *
+ */
+public class CDOModelHelper {
+
+	/** The logger for this class. */
+	private static final Logger log = Logger.getLogger(CDOModelHelper.class.getName());
+	
+	public static VirtualMachine getVirtualMachineById(String vmId, LogicalDCModel ldcm) {
+		for (Hypervisor h: ldcm.getHypervisors()) {
+			for (VirtualMachine vm: h.getVirtualMachines()) {
+				if (vmId == vm.getId())
+					return vm;
+			}
+		}
+		
+		return null;
+	}
+	
+	/**
+	 * Finds virtual machine object on the list of virtual machines based on its id
+	 * @param vmId Id of virtual machine
+	 * @param vms List of virtual machines
+	 * @return
+	 */
+	public static VirtualMachine getVirtualMachineById(String vmId, List<VirtualMachine> vms) {
+		for (VirtualMachine vm : vms) {
+			if (vmId == vm.getId())
+				return vm;
+		}
+		return null;
+	}
+
+	/**
+	 * Gets physical machine object from provided PhysicalDCModel based on its id
+	 * @param nodeId Id of physical machine
+	 * @param pdcm Physical Data Center Model 
+	 * @return Physical machine with specified id
+	 */
+	public static ComputeNode getComputeNodeById(String nodeId, PhysicalDCModel pdcm) {		
+		for(Rack rack : pdcm.getRacks()) {
+			for(AbstractNode node : rack.getNodes()) {
+				if (node instanceof ComputeNode) {
+					if (nodeId.equals(node.getId()))
+						return (ComputeNode)node;
+				}
+			}
+		}
+		
+		return null;
+	}
+	
+	/**
+	 * Gets physical machine object where measurement was taken from provided LogicalDCModel
+	 * @param measurementId Id of measurement taken
+	 * @param ldcm Logical Data Center Model containing the measurement
+	 * @return Physical machine where measurement was taken
+	 */
+	public static ComputeNode getComputeNode(String measurementId, LogicalDCModel ldcm) {
+		for (Hypervisor h: ldcm.getHypervisors()) {
+			for (VirtualMachine vm: h.getVirtualMachines()) {
+				if (measurementId.contains(vm.getId()))
+					return h.getNode();
+			}
+		}
+		
+		return null;
+	}
+	
+	/**
+	 * Gets virtual machine where measurement was taken from provided LogicalDCModel
+	 * @param measurementId
+	 * @param ldcm Logical Data Center Model containing the measurement
+	 * @return Virtual machine where measurement was taken
+	 */
+	public static VirtualMachine getVirtualMachine(String measurementId, LogicalDCModel ldcm) {
+		for (Hypervisor h: ldcm.getHypervisors()) {
+			for (VirtualMachine vm: h.getVirtualMachines()) {
+				if (measurementId.contains(vm.getId()))
+					return vm;
+			}
+		}
+		
+		return null;
+	}
+		
+	/**
+	 * Transforms Infrastructure Models into list of physical machines with assigned virtual machines
+	 * @param pdcm Physical Data Center Model
+	 * @param ldcm Logical Data Center Model
+	 * @return List of all physical machines with assigned virtual machines (simplified model)
+	 */
+	public static List<PhysicalMachine> getPhysicalMachinesFromCdoModel(PhysicalDCModel pdcm, LogicalDCModel ldcm) {
+		List<PhysicalMachine> pms = new ArrayList<PhysicalMachine>();
+		
+		for(Rack rack : pdcm.getRacks()) {
+			for(AbstractNode node : rack.getNodes()) {
+				if (node instanceof ComputeNode) {
+					ComputeNode computeNode = (ComputeNode) node;
+					String id = computeNode.getId();
+					int noCores = 0;
+					double totalMemory = 0;
+					boolean isPoweredOn = false;
+					
+					if (computeNode.getState() == NodeState.RUNNING)
+						isPoweredOn = true;
+					
+					for (ProcessingUnitSpecification pus : computeNode.getCpuSpecifications()) {
+						noCores += pus.getNumberOfCores();
+					}
+					for (MemorySpecification ms : computeNode.getMemorySpecifications()) {
+//						if (ms.getSize() != null)
+						try {
+							totalMemory += ms.getSize().getEstimatedValue();
+						} catch (Exception ex) {
+							
+						}
+					}
+					
+					PhysicalMachine pm = new PhysicalMachine(id, noCores, totalMemory, isPoweredOn);
+					
+					for (Hypervisor h : ldcm.getHypervisors()) {
+						if (h.getNode() != null) {
+							if (h.getNode().getId().equals(id)) {
+								for (VirtualMachine vm : h.getVirtualMachines()) {
+									String vmId = vm.getId();
+									int vmNoCores = 0;
+									for(VirtualProcessingUnit vProcessingUnit : vm.getVirtualProcessingUnits()) {
+                                        vmNoCores += vProcessingUnit.getVirtualCores();
+                                    }
+									double vmMemory = 0;
+									
+									for (VirtualMemory vmem : vm.getVirtualMemoryUnits()) {
+//										if (vmem.getProvisioned() != null)
+										try {
+											vmMemory += vmem.getProvisioned().getEstimatedValue();
+										} catch (Exception ex) {
+											
+										}
+									}
+									eu.cactosfp7.cactoopt.models.VirtualMachine vmToAssign = new eu.cactosfp7.cactoopt.models.VirtualMachine(vmId, vmNoCores, vmMemory);
+									pm.assignVm(vmToAssign);
+								}
+							}
+						} else {
+							log.info("Hypervisor " + h.getId() + " is not linked with any compute node! Problems with importing virtual machines may occur.");
+						}
+					}
+					
+					pms.add(pm);
+				}
+			}	
+		}
+		
+		return pms;
+	}
+	
+	/**
+	 * 
+	 * @param pdcm Physical Data Center Model
+	 * @param ldcm Logical Data Center Model
+	 * @return List of all physical machines with assigned virtual machines (simplified model)
+	 */
+	public static List<eu.cactosfp7.cactoopt.framework.model.PhysicalMachine> getFrameworkPhysicalMachinesFromCdoModel(PhysicalDCModel pdcm, LogicalDCModel ldcm) {
+		List<eu.cactosfp7.cactoopt.framework.model.PhysicalMachine> pms = new ArrayList<eu.cactosfp7.cactoopt.framework.model.PhysicalMachine>();
+		
+		for(Rack rack : pdcm.getRacks()) {
+			for(AbstractNode node : rack.getNodes()) {
+				if (node instanceof ComputeNode) {
+					ComputeNode computeNode = (ComputeNode) node;
+					String id = computeNode.getId();
+					int noCores = 0;
+					long totalMemory = 0;
+					
+					for (ProcessingUnitSpecification pus : computeNode.getCpuSpecifications()) {
+						noCores += pus.getNumberOfCores();
+					}
+					for (MemorySpecification ms : computeNode.getMemorySpecifications()) {
+						totalMemory += ms.getSize().getEstimatedValue();
+					}
+					
+					eu.cactosfp7.cactoopt.framework.model.PhysicalMachine pm = new eu.cactosfp7.cactoopt.framework.model.PhysicalMachine(id, noCores, totalMemory);
+					
+					for (Hypervisor h : ldcm.getHypervisors()) {
+//						if ((h.getNode() != null) && (h.getNode().getId() == id)) {
+						if ((h.getNode() != null) && (h.getNode().getId().equals(id))) {
+							for (VirtualMachine vm : h.getVirtualMachines()) {
+								String vmId = vm.getId();
+								int vmNoCores = 0;
+                                for(VirtualProcessingUnit vProcessingUnit : vm.getVirtualProcessingUnits()) {
+                                    vmNoCores += vProcessingUnit.getVirtualCores();
+                                }
+								long vmMemory = 0;
+								
+								for (VirtualMemory vmem : vm.getVirtualMemoryUnits()) {
+									try{
+										vmMemory += vmem.
+											getProvisioned().
+											getEstimatedValue();
+									}catch(NullPointerException e){
+										// do nothing
+										log.severe("vmem has no provisioned memory for vm " + vm.getName());
+									}
+								}
+								eu.cactosfp7.cactoopt.framework.model.VirtualMachine vmToAssign = new eu.cactosfp7.cactoopt.framework.model.VirtualMachine(vmId, vmNoCores, vmMemory);
+								try {
+								pm.assignVm(vmToAssign);
+								} catch (PlacementException ex) {
+									
+								}
+							}
+						}
+					}
+					
+					pms.add(pm);
+				}
+			}	
+		}
+		
+		return pms;
+	}
+	
+	/**
+	 * Transforms list of virtual machine objects from Infrastructure Models into 
+	 * a list of virtual machines in simplified model
+	 * @param vms List of virtual machine objects from Infrastructure Models
+	 * @return List of virtual machines in simplified model
+	 */
+	public static List<eu.cactosfp7.cactoopt.models.VirtualMachine> transformVirtualMachineToSimpleModel(List<VirtualMachine> vms) {
+		List<eu.cactosfp7.cactoopt.models.VirtualMachine> vmsSimpleModel = new ArrayList<eu.cactosfp7.cactoopt.models.VirtualMachine>();
+		for (VirtualMachine vm : vms) {
+			String vmId = vm.getId();
+			int vmNoCores = 0;
+            for(VirtualProcessingUnit vProcessingUnit : vm.getVirtualProcessingUnits()) {
+                vmNoCores += vProcessingUnit.getVirtualCores();
+            }
+			double vmMemory = 0;
+			
+			for (VirtualMemory vmem : vm.getVirtualMemoryUnits()) {
+				vmMemory += vmem.getProvisioned().getEstimatedValue();
+			}
+			eu.cactosfp7.cactoopt.models.VirtualMachine vmSimpleModel = new eu.cactosfp7.cactoopt.models.VirtualMachine(vmId, vmNoCores, vmMemory);
+			vmsSimpleModel.add(vmSimpleModel);
+		}
+		return vmsSimpleModel;
+	}
+	
+	public static OptimisationPlan tranformListOfMigrationMovesToOptimisationPlan(PhysicalDCModel pdcm, LogicalDCModel ldcm, List<MigrationMove> moves) {
+		OptimisationPlan plan = OptimisationplanFactory.eINSTANCE.createOptimisationPlan();
+		SequentialSteps rootStep = OptimisationplanFactory.eINSTANCE.createSequentialSteps();
+		plan.setOptimisationStep(rootStep);
+		rootStep.setOptimisationPlan(plan);
+		rootStep.setExecutionStatus(ExecutionStatus.READY);
+		
+		for(MigrationMove move : moves) {
+			VmMigrationAction migration = OptimisationplanFactory.eINSTANCE.createVmMigrationAction();
+			
+			VirtualMachine vm = CDOModelHelper.getVirtualMachineById(move.getVm().getId(), ldcm);
+			ComputeNode source = CDOModelHelper.getComputeNodeById(move.getMigration().getSource().getId(), pdcm);
+			ComputeNode target = CDOModelHelper.getComputeNodeById(move.getMigration().getDestination().getId(), pdcm);
+			
+			log.info("TEST: Migration of VM " + vm.toString() + " [" + vm.getName()  + "], source: " + source.getName() + ", target: " + target.getName());
+			
+			// Check if the VM is running (don't migrate VMs that are not running)
+			if (vm.getState() != VM_State.RUNNING) {
+				log.info("Migration of VM " + vm.toString() + " was removed from Optimisation Plan "
+						+ plan.toString() + ". VM state: " + vm.getState());
+			// For FLEXIANT testbed check if the PMs are in the same cluster (don't migrate VMs between clusters)
+			} else if (target.getName().startsWith("10.15")
+					&& !target.getName().startsWith(source.getName().substring(0, 7))) { 
+				log.info("Migration of VM " + vm.toString() + " was removed from Optimisation Plan "
+						+ plan.toString() + ". Source: " + source.getName() + ", target: " + target.getName());
+			} else {
+				migration.setMigratedVm(vm);
+				migration.setSourceHost(source.getHypervisor());
+				migration.setTargetHost(target.getHypervisor());
+				migration.setSequentialSteps(rootStep);
+				migration.setExecutionStatus(ExecutionStatus.READY);
+			}
+		}
+
+		plan.setCreationDate(new Date());
+		return plan;
+	}
+	
+	/**
+	 * Creates optimisation plan object, adds the root step (SequentialSteps), sets execution status
+	 * to READY and sets creation date to current time.
+	 * @return optimisation plan object
+	 */
+	public static OptimisationPlan createOptimisationPlan() {
+		OptimisationPlan plan = OptimisationplanFactory.eINSTANCE.createOptimisationPlan();
+		SequentialSteps rootStep = OptimisationplanFactory.eINSTANCE.createSequentialSteps();
+		plan.setOptimisationStep(rootStep);
+		rootStep.setOptimisationPlan(plan);
+		rootStep.setExecutionStatus(ExecutionStatus.READY);
+		plan.setCreationDate(new Date());
+		return plan;
+	}
+	
+	/**
+	 * 
+	 * @param plan
+	 * @param vmToPlace
+	 * @param hToPlace
+	 */
+	public static void addInitialPlacementActionToOptimisationPlan(OptimisationPlan plan, VirtualMachine vmToPlace, Hypervisor hToPlace) {
+		VmPlacementAction placement = OptimisationplanFactory.eINSTANCE.createVmPlacementAction();
+		placement.setVmImage(vmToPlace.getVMImageInstance().getRootDisk());
+		placement.setTargetHost(hToPlace);
+		placement.setUnassignedVirtualMachine(vmToPlace);
+		placement.setSequentialSteps((SequentialSteps) plan.getOptimisationStep());	
+		// TODO: check adding action to the plan!
+	}
+	
+	/**
+	 * 
+	 * @param plan
+	 * @param vmToMigrate
+	 * @param sourceHypervisor
+	 * @param destinationHypervisor
+	 */
+	public static void addMigrationActionToOptimisationPlan(OptimisationPlan plan, VirtualMachine vmToMigrate, Hypervisor sourceHypervisor, Hypervisor destinationHypervisor) {
+		VmMigrationAction migration = OptimisationplanFactory.eINSTANCE.createVmMigrationAction();
+		migration.setMigratedVm(vmToMigrate);
+		migration.setSourceHost(sourceHypervisor);
+		migration.setTargetHost(destinationHypervisor);
+		migration.setSequentialSteps((SequentialSteps) plan.getOptimisationStep());
+		migration.setExecutionStatus(ExecutionStatus.READY);
+	}
+	
+	public static double getAvailableStorage(ComputeNode node, PhysicalLoadModel plm) {
+		log.info("Get available storage for [" + node.getName() + "]");
+		
+		for (StorageMeasurement sm : plm.getStorageMeasurement()) {
+			if ((sm == null) || (sm.getStorageUtilization() == null) || (sm.getStorageUtilization().getValue() == null))
+				continue;
+			
+			StorageSpecification ss = sm.getObservedStorage();
+			
+			if ((ss == null) || (ss.getSize() == null))
+				continue;
+			
+			if (!ss.getNode().equals(node)) {
+				continue;
+			}
+			
+			double storageSize = ss.getSize().getEstimatedValue();
+			log.info("storageSize: " + storageSize + " GB");
+
+			double storageUtilization = sm.getStorageUtilization().getValue().getEstimatedValue();
+			log.info("storageUtilization: " + (storageUtilization * 100) + "%");
+			
+			double availableStorage = storageSize * (1.0 - storageUtilization);
+			log.info("availableStorage: " + availableStorage + " GB");
+			
+			return availableStorage;
+		}
+		
+		log.warning("Compute node [" + node.getName() + "] not found in the physical load model!");
+		
+		return 0.0;
+	}
+}

@@ -1,0 +1,13 @@
+Manifest-Version: 1.0
+Bundle-ManifestVersion: 2
+Bundle-Name: Lin-Kernighan Optimisation Service
+Bundle-SymbolicName: eu.cactosfp7.cactoopt.optimisationservice.linkernighan
+Bundle-Version: 1.0.0.qualifier
+Bundle-Activator: eu.cactosfp7.cactoopt.optimisationservice.linkernighan.Activator
+Bundle-Vendor: CACTOS Consortium
+Require-Bundle: eu.cactosfp7.cactoopt.optimisationservice;visibility:=reexport,
+ eu.cactosfp7.cactoopt;bundle-version="1.1.0"
+Bundle-RequiredExecutionEnvironment: JavaSE-1.7
+Bundle-ActivationPolicy: lazy
+Service-Component: OSGI-INF/optimisationservice.xml
+Export-Package: eu.cactosfp7.cactoopt.optimisationservice.linkernighan

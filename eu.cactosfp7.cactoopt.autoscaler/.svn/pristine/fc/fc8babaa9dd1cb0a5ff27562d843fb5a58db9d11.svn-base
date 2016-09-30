@@ -1,0 +1,10 @@
+Manifest-Version: 1.0
+Bundle-ManifestVersion: 2
+Bundle-Name: Autoscaler Implementation within CactoOpt
+Bundle-SymbolicName: eu.cactosfp7.cactoopt.autoscaler
+Bundle-Version: 1.0.0.qualifier
+Bundle-Vendor: CACTOS Consortium
+Require-Bundle: eu.cactosfp7.infrastructuremodels;bundle-version="1.0.0";visibility:=reexport,
+ eu.cactosfp7.optimisationplan;bundle-version="1.0.0";visibility:=reexport
+Export-Package: eu.cactosfp7.cactoopt.autoscaler
+Bundle-RequiredExecutionEnvironment: JavaSE-1.7

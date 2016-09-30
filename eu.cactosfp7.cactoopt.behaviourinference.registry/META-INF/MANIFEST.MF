@@ -1,0 +1,13 @@
+Manifest-Version: 1.0
+Bundle-ManifestVersion: 2
+Bundle-Name: Behaviour Inference Service Registry
+Bundle-SymbolicName: eu.cactosfp7.cactoopt.behaviourinference.registry
+Bundle-Version: 1.0.0.qualifier
+Bundle-Activator: eu.cactosfp7.cactoopt.behaviourinference.registry.Activator
+Bundle-Vendor: CACTOS Consortium
+Require-Bundle: eu.cactosfp7.cactoopt.behaviourinference;bundle-version="1.0.0";visibility:=reexport,
+ org.eclipse.osgi
+Bundle-RequiredExecutionEnvironment: JavaSE-1.7
+Bundle-ActivationPolicy: lazy
+Service-Component: OSGI-INF/behaviourinference.xml
+Export-Package: eu.cactosfp7.cactoopt.behaviourinference.registry

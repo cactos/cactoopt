@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<scr:component xmlns:scr="http://www.osgi.org/xmlns/scr/v1.1.0" name="eu.cactosfp7.cactoopt.placementservice.causa.CausaPlacementService">
+   <implementation class="eu.cactosfp7.cactoopt.placementservice.causa.CausaPlacementService"/>
+   <property name="placementName" type="String" value="causa" />
+   <service>
+      <provide interface="org.osgi.service.cm.ManagedService"/>
+      <provide interface="eu.cactosfp7.cactoopt.placementservice.IPlacementService"/>
+   </service>
+   <property name="service.pid" type="String" value="cactoopt_placement_causa"/>
+</scr:component>

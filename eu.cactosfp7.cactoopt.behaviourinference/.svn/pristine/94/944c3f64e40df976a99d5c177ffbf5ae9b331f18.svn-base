@@ -1,0 +1,11 @@
+Manifest-Version: 1.0
+Bundle-ManifestVersion: 2
+Bundle-Name: Behaviour Inference
+Bundle-SymbolicName: eu.cactosfp7.cactoopt.behaviourinference
+Bundle-Version: 1.0.0.qualifier
+Bundle-Vendor: CACTOS Consortium
+Require-Bundle: org.eclipse.core.runtime,
+ eu.cactosfp7.cactoopt;bundle-version="1.1.0",
+ eu.cactosfp7.infrastructuremodels;visibility:=reexport
+Bundle-RequiredExecutionEnvironment: JavaSE-1.7
+Export-Package: eu.cactosfp7.cactoopt.behaviourinference

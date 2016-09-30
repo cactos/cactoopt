@@ -1,0 +1,180 @@
+package eu.cactosfp7.cactoopt.optimisationservice.registry;
+
+import java.util.Dictionary;
+import java.util.Map;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
+import org.osgi.framework.BundleContext;
+import org.osgi.framework.InvalidSyntaxException;
+import org.osgi.framework.ServiceEvent;
+import org.osgi.framework.ServiceListener;
+import org.osgi.framework.ServiceReference;
+import org.osgi.service.cm.ConfigurationException;
+import org.osgi.service.cm.ManagedService;
+import org.osgi.service.event.Event;
+import org.osgi.service.event.EventAdmin;
+
+import eu.cactosfp7.cactoopt.optimisationservice.IOptimisationAlgorithm;
+
+/**
+ * Handles settings of the {@link OptimisationServiceRegistry}.
+ * 
+ * @author stier
+ *
+ */
+public class OptimisationSettings implements ManagedService, ServiceListener {
+
+	/**
+	 * Filename of the optimisation configuration file which is watched by the
+	 * Felix Fileinstaller The file is located in eu.cactosfp7.configuration.
+	 */
+	public static final String OPTIMISATIONCONFIGID = "cactoopt_optimisationalgorithm";
+
+	/**
+	 * The selected optimisation algorithm.
+	 */
+	public static IOptimisationAlgorithm SELECTED_OPTIMISATION;
+	
+	public static String AUTOSCALER_ALGORITHM_NAME;
+	public static boolean RESOURCE_CONTROL_ENABLED;
+	public static int CYCLIC_OPTIMISER_FREQ = 10; // seconds
+	
+	/** Logger for this class. */
+	private static final Logger log = Logger.getLogger(OptimisationSettings.class.getName());
+
+	private static final String USED_ALGORITHM_NAME_KEY = "optimisationName";
+
+	private static final String AUTOSCALER_ALGORITHM_NAME_KEY = "autoscalerAlgorithmName";
+	
+	private static final String RESOURCE_CONTROL_ENABLED_KEY = "resourceControlEnalbed";
+	
+	private static final String CYCLIC_OPTIMISER_FREQ_KEY = "cyclicOptimiserFreq";
+
+	public static final String OBJECT_CLASS = "objectclass";
+
+
+	@Override
+	public void updated(Dictionary<String, ?> properties) throws ConfigurationException {
+
+		if (properties == null || properties.isEmpty()) {
+			log.warning(OPTIMISATIONCONFIGID
+					+ ".cfg is empty. No optimisation algorithm is used. Provide file to resolve this issue.");
+		} else {
+			// configure
+			log.info((String) properties.get(USED_ALGORITHM_NAME_KEY));
+			updateChosenAlgorithm((String) properties.get(USED_ALGORITHM_NAME_KEY));
+			updatedAutoscalerConfig(properties);
+			updateOptimiserFreq(properties);
+		}
+	}
+
+	private void updateOptimiserFreq(Dictionary<String, ?> properties) {
+		String freqStr = (String) properties.get(CYCLIC_OPTIMISER_FREQ_KEY);
+		if(freqStr == null){
+			log.warning("No optimisation frequency specified. Default value of 10s will be set.");
+			CYCLIC_OPTIMISER_FREQ = 10;
+			return;
+		}
+		CYCLIC_OPTIMISER_FREQ = Integer.valueOf(freqStr);
+		log.info("Set optimisation frequency to " + freqStr);
+	}
+
+	private static void updatedAutoscalerConfig(Dictionary<String, ?> properties) {
+		log.info("Reading Autoscaler configuration from the config file.");
+		OptimisationSettings.AUTOSCALER_ALGORITHM_NAME = (String) properties.get(AUTOSCALER_ALGORITHM_NAME_KEY);
+		OptimisationSettings.RESOURCE_CONTROL_ENABLED = Boolean.valueOf((String) properties.get(RESOURCE_CONTROL_ENABLED_KEY)).booleanValue();
+	}
+
+	private void updateChosenAlgorithm(String name) {
+		// Collect all algorithms that fit the chosen name.
+		String filter = "(&(" + OBJECT_CLASS + "=" + IOptimisationAlgorithm.class.getName() + ")("
+				+ USED_ALGORITHM_NAME_KEY + "=" + name + "))";
+		ServiceReference<IOptimisationAlgorithm>[] serviceReferences = getServiceReferences(filter);
+		// pick one (or any of the algorithms that fit the conditions
+		if (serviceReferences != null && serviceReferences.length > 0) {
+			setUsedService(serviceReferences[0]);
+		}
+		// register to wait for an initial or additional suitable algorithm to
+		// be registered
+		try {
+			Activator.getContext().addServiceListener(this, filter);
+		} catch (InvalidSyntaxException e) {
+			log.log(Level.SEVERE, "Filter condition for services was not correctly specified. Fix in source code.", e);
+		}
+	}
+
+	private synchronized void setUsedService(ServiceReference<IOptimisationAlgorithm> serviceReference) {
+		IOptimisationAlgorithm algorithm = Activator.getContext().getService(serviceReference);
+		if (algorithm != null) {
+			log.log(Level.INFO, "Setting the used algorithm to: " + algorithm.toString());
+			SELECTED_OPTIMISATION = algorithm;
+			triggerEvent(OptimisationServiceRegistry.OPTIMISATION_UPDATED);
+			OptimisationSettings.SELECTED_OPTIMISATION = algorithm;
+		}
+	}
+
+	private ServiceReference<IOptimisationAlgorithm>[] getServiceReferences(String filter) {
+		ServiceReference<IOptimisationAlgorithm>[] serviceReferences = null;
+		try {
+			serviceReferences = (ServiceReference<IOptimisationAlgorithm>[]) Activator.getContext()
+					.getServiceReferences(IOptimisationAlgorithm.class.getName(), filter);
+			if (serviceReferences == null) {
+				log.log(Level.FINE, "Found no optimisation services.");
+			} else {
+				log.log(Level.FINE, "Found " + serviceReferences.length + " optimisation services.");
+			}
+		} catch (InvalidSyntaxException e) {
+			log.log(Level.SEVERE, "Filter condition for services was not correctly specified. Fix in source code.", e);
+		}
+		return serviceReferences;
+	}
+
+	@Override
+	public void serviceChanged(ServiceEvent event) {
+		ServiceReference<IOptimisationAlgorithm> serviceReference = (ServiceReference<IOptimisationAlgorithm>) event
+				.getServiceReference();
+		log.log(Level.FINE, "Service changed to " + serviceReference.toString());
+		if (serviceReference != null && event.getType() == ServiceEvent.REGISTERED) {
+			setUsedService(serviceReference);
+		} else if (event.getType() == ServiceEvent.UNREGISTERING) {
+			unregisterUsedService();
+		}
+	}
+
+	private void unregisterUsedService() {
+		OptimisationSettings.SELECTED_OPTIMISATION = null;
+		String unregisteredEvent = OptimisationServiceRegistry.OPTIMISATION_UNREGISTERED;
+		triggerEvent(unregisteredEvent);
+	}
+
+	private void triggerEvent(String eventString) {
+		final Event event = new Event(eventString, (Map<String, ?>) null);
+		BundleContext context = Activator.getContext();
+		ServiceReference<?> serviceReference = context.getServiceReference(EventAdmin.class.getName());
+		if (serviceReference == null) {
+			ServiceListener sl = new ServiceListener() {
+
+				@Override
+				public void serviceChanged(ServiceEvent serviceEvent) {
+					triggerEventOnEventAdminReference(event, serviceEvent.getServiceReference());
+				}
+			};
+			String filter = "(objectclass=" + EventAdmin.class.getName() + ")";
+			try {
+				context.addServiceListener(sl, filter);
+			} catch (InvalidSyntaxException e) {
+				throw new IllegalStateException(
+						"Could not obtain Event Admin from bundle context even though it should have been initialized.",
+						e);
+			}
+		} else {
+			triggerEventOnEventAdminReference(event, serviceReference);
+		}
+	}
+
+	private void triggerEventOnEventAdminReference(final Event event, ServiceReference<?> serviceReference) {
+		EventAdmin eventAdmin = (EventAdmin) Activator.getContext().getService(serviceReference);
+		eventAdmin.postEvent(event);
+	}
+}

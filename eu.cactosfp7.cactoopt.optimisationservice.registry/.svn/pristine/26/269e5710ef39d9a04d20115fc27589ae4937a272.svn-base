@@ -1,0 +1,6 @@
+output.. = bin/
+bin.includes = META-INF/,\
+               .,\
+               OSGI-INF/optimisation.xml,\
+               OSGI-INF/optimisationsettings.xml
+source.. = src/

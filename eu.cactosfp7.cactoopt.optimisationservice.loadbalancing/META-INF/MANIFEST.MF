@@ -1,0 +1,10 @@
+Manifest-Version: 1.0
+Bundle-ManifestVersion: 2
+Bundle-Name: Loadbalancing Optimisation Service
+Bundle-SymbolicName: eu.cactosfp7.cactoopt.optimisationservice.loadbalancing
+Bundle-Version: 1.0.0.qualifier
+Bundle-Vendor: CACTOS Consortium
+Bundle-RequiredExecutionEnvironment: JavaSE-1.7
+Require-Bundle: eu.cactosfp7.cactoopt.optimisationservice;bundle-version="1.0.0",
+ eu.cactosfp7.cactoopt
+Service-Component: OSGI-INF/component.xml

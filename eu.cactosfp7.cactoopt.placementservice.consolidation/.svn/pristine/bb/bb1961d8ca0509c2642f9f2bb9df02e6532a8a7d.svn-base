@@ -1,0 +1,9 @@
+Manifest-Version: 1.0
+Bundle-ManifestVersion: 2
+Bundle-Name: Consolidation Placement Algorithm Service
+Bundle-SymbolicName: eu.cactosfp7.cactoopt.placementservice.consolidation
+Bundle-Version: 1.0.0.qualifier
+Bundle-Vendor: CACTOS Consortium
+Bundle-RequiredExecutionEnvironment: JavaSE-1.7
+Require-Bundle: eu.cactosfp7.cactoopt.placementservice;bundle-version="1.0.0"
+Service-Component: OSGI-INF/component.xml

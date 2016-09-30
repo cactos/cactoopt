@@ -1,0 +1,283 @@
+//package se.umu.cs.ds.causa.demos.cactosy3;
+package eu.cactosfp7.cactoopt.placementservice.causa;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import se.umu.cs.ds.causa.constraints.Constraint;
+import se.umu.cs.ds.causa.constraints.global.NoCPUCoreOverCommitGlobalConstraint;
+import se.umu.cs.ds.causa.constraints.global.NoRAMOverCommitGlobalConstraint;
+import se.umu.cs.ds.causa.constraints.global.StorageReservationGlobalConstraint;
+import se.umu.cs.ds.causa.constraints.local.PMAffinityVirtualMachineConstraint;
+import se.umu.cs.ds.causa.constraints.local.PMLabelAffinityVirtualMachineConstraint;
+import se.umu.cs.ds.causa.constraints.local.VMLabelAntiAffinityVirtualMachineConstraint;
+import se.umu.cs.ds.causa.models.DataCenter;
+import se.umu.cs.ds.causa.models.DataCenter.Configuration;
+import se.umu.cs.ds.causa.models.PhysicalMachine;
+import se.umu.cs.ds.causa.models.VirtualMachine;
+
+public class CactoOptIntegration
+{
+  public static final String PREFIX_ULM_COMPUTENODENAMES = "computenode";
+//  public static final String PREFIX_ULM_COMPUTENODENAMES = "PM";
+  public static final String PREFIX_FLEX_NETWORKSEGMENT  = "10.15";
+  public static final PhysicalMachine.Label PMLABEL_HAS_LOCAL_STORAGE                = new PhysicalMachine.Label("HAS_LOCAL_STORAGE");
+  public static final PhysicalMachine.Label PMLABEL_ARCHITECTURE_HASWELL             = new PhysicalMachine.Label("ARCHITECTURE_HASWELL");
+  public static final PhysicalMachine.Label PMLABEL_ARCHITECTURE_SANDYBRIDGE         = new PhysicalMachine.Label("ARCHITECTURE_SANDYBRIDGE");
+  public static final PhysicalMachine.Label PMLABEL_NETWORK_SEGMENT_A                = new PhysicalMachine.Label("NETWORK_SEGMENT_A");
+  public static final PhysicalMachine.Label PMLABEL_NETWORK_SEGMENT_B                = new PhysicalMachine.Label("NETWORK_SEGMENT_B");
+  public static final VirtualMachine.Label VMLABEL_REQUIRES_LOCAL_STORAGE            = new VirtualMachine.Label("REQUIRES_LOCAL_STORAGE");
+  public static final VirtualMachine.Label VMLABEL_REQUIRES_ARCHITECTURE_HASWELL     = new VirtualMachine.Label("REQUIRES_ARCHITECTURE_HASWELL");
+  public static final VirtualMachine.Label VMLABEL_REQUIRES_ARCHITECTURE_SANDYBRIDGE = new VirtualMachine.Label("REQUIRES_ARCHITECTURE_SANDYBRIDGE");
+  public static final VirtualMachine.Label VMLABEL_REQUIRES_NETWORK_SEGMENT_A        = new VirtualMachine.Label("REQUIRES_NETWORK_SEGMENT_A");
+  public static final VirtualMachine.Label VMLABEL_REQUIRES_NETWORK_SEGMENT_B        = new VirtualMachine.Label("REQUIRES_NETWORK_SEGMENT_B");
+  public static final VirtualMachine.Label VMLABEL_IOINTENSIVE                       = new VirtualMachine.Label("IO_INTENSIVE");
+  public static final VirtualMachine.Label VMLABEL_IMMOVABLE                         = new VirtualMachine.Label("IMMOVABLE");
+  public static final VirtualMachine.Label VMLABEL_JOBTYPE_MOLPRO_DFT                = new VirtualMachine.Label("JOBTYPE_MOLPRO_DFT");
+  public static final VirtualMachine.Label VMLABEL_JOBTYPE_MOLPRO_LCCSD_KIZ          = new VirtualMachine.Label("JOBTYPE_MOLPRO_LCCSD_KIZ");
+  public static final PhysicalMachine.Label[] PMLABELS_ARCHITECTURE =
+    new PhysicalMachine.Label[] {PMLABEL_ARCHITECTURE_HASWELL, PMLABEL_ARCHITECTURE_SANDYBRIDGE};
+  public static final PhysicalMachine.Label[] PMLABELS_NETWORK_SEGMENTS =
+    new PhysicalMachine.Label[] {PMLABEL_NETWORK_SEGMENT_A, PMLABEL_NETWORK_SEGMENT_B};
+  public static final String PREFIX_TRACE_PLACEMENT    = "causa_placement";
+  public static final String PREFIX_TRACE_OPTIMIZATION = "causa_optimization";
+
+
+  //----------------------------------------------------------
+  //----------------------------------------------------------
+  private static PhysicalMachine.Label[] getPMNetworkSegmentLabels (String ipAddress)
+  {
+    PhysicalMachine.Label label =
+      ipAddress.startsWith(PREFIX_FLEX_NETWORKSEGMENT) ? PMLABEL_NETWORK_SEGMENT_B : PMLABEL_NETWORK_SEGMENT_A;
+    return new PhysicalMachine.Label[] {label};
+  }
+
+  //----------------------------------------------------------
+  private static final int getNodeIndex (String nodename)
+  {
+    if (!nodename.startsWith(PREFIX_ULM_COMPUTENODENAMES))
+      return -1;
+
+    return Integer.parseInt(nodename.substring(PREFIX_ULM_COMPUTENODENAMES.length()));
+  }
+
+  //----------------------------------------------------------
+  private static PhysicalMachine.Label[] getPMArchitectureLabels (String nodename)
+  {
+    int index = getNodeIndex(nodename);
+
+    if (index < 0)
+      return new PhysicalMachine.Label[0];  // non-UUlm testbed machine, unknown labels
+
+    // 1-4 Intel Haswell
+    // 5-16 Intel Sandy Bridge
+    // 18-19 AMD
+    switch (index)
+    {
+      case 15 : return new PhysicalMachine.Label[] {PMLABEL_ARCHITECTURE_SANDYBRIDGE};
+      case 14 : return new PhysicalMachine.Label[] {PMLABEL_ARCHITECTURE_SANDYBRIDGE};
+      case  5 : return new PhysicalMachine.Label[] {PMLABEL_ARCHITECTURE_SANDYBRIDGE, PMLABEL_HAS_LOCAL_STORAGE};
+      case  8 : return new PhysicalMachine.Label[] {PMLABEL_ARCHITECTURE_SANDYBRIDGE, PMLABEL_HAS_LOCAL_STORAGE};
+      case 16 : return new PhysicalMachine.Label[] {PMLABEL_ARCHITECTURE_SANDYBRIDGE};
+      case  2 : return new PhysicalMachine.Label[] {PMLABEL_ARCHITECTURE_HASWELL, PMLABEL_HAS_LOCAL_STORAGE};
+      case 11 : return new PhysicalMachine.Label[] {PMLABEL_ARCHITECTURE_SANDYBRIDGE, PMLABEL_HAS_LOCAL_STORAGE};
+      case 12 : return new PhysicalMachine.Label[] {PMLABEL_ARCHITECTURE_SANDYBRIDGE, PMLABEL_HAS_LOCAL_STORAGE};
+      default :
+        throw new IllegalArgumentException(Integer.toString(index));
+    }
+  }
+
+  //----------------------------------------------------------
+  private static PhysicalMachine.Label[] getUpdatedPMLabels (PhysicalMachine pm)
+  {
+    final String nodename = pm.getIdAsString();
+    final String ipAddress = pm.getNetworkAddress();
+
+    ArrayList<PhysicalMachine.Label> list = new ArrayList<PhysicalMachine.Label>();
+    for (PhysicalMachine.Label label : pm.getLabels())
+      list.add(label);
+    for (PhysicalMachine.Label label : getPMArchitectureLabels(nodename))
+      if (!pm.hasLabel(label))
+        list.add(label);
+    for (PhysicalMachine.Label label : getPMNetworkSegmentLabels(ipAddress))
+      if (!pm.hasLabel(label))
+        list.add(label);
+    return list.toArray(new PhysicalMachine.Label[list.size()]);
+  }
+
+  //----------------------------------------------------------
+  // NOTE: may return null
+  private static PhysicalMachine.Label getArchitectureLabel (PhysicalMachine pm)
+  {
+    for (PhysicalMachine.Label label : PMLABELS_ARCHITECTURE)
+      if (pm.hasLabel(label))
+        return label;
+    return null;
+  }
+
+  //----------------------------------------------------------
+  // NOTE: may return null
+  private static PhysicalMachine.Label getNetworkSegmentLabel (PhysicalMachine pm)
+  {
+    for (PhysicalMachine.Label label : PMLABELS_NETWORK_SEGMENTS)
+      if (pm.hasLabel(label))
+        return label;
+    return null;
+  }
+
+  //----------------------------------------------------------
+  private static VirtualMachine.Label[] getVMJobTypeLabels (VirtualMachine vm)
+  {
+    ArrayList<VirtualMachine.Label> list = new ArrayList<VirtualMachine.Label>();
+    if (vm.hasLabel(VMLABEL_JOBTYPE_MOLPRO_LCCSD_KIZ))
+    {
+      list.add(VMLABEL_IOINTENSIVE);
+      list.add(VMLABEL_REQUIRES_LOCAL_STORAGE);
+    }
+    return list.toArray(new VirtualMachine.Label[list.size()]);
+  }
+
+  //----------------------------------------------------------
+  private static VirtualMachine.Label[] getUpdatedVMLabels (VirtualMachine vm)
+  {
+    ArrayList<VirtualMachine.Label> list = new ArrayList<VirtualMachine.Label>();
+    for (VirtualMachine.Label label : vm.getLabels())
+      list.add(label);
+    for (VirtualMachine.Label label : getVMJobTypeLabels(vm))
+      if (!vm.hasLabel(label))
+        list.add(label);
+    return list.toArray(new VirtualMachine.Label[list.size()]);
+  }
+
+
+  //----------------------------------------------------------
+  //----------------------------------------------------------
+  private static DataCenter updatePMLabels (DataCenter datacenter)
+  {
+    final PhysicalMachine[] pms = datacenter.getPhysicalMachines();
+    for (int i=0; i<pms.length; i++)
+    {
+      PhysicalMachine pm = pms[i];
+      PhysicalMachine.Label[] labels = getUpdatedPMLabels(pm);
+      pms[i] = new PhysicalMachine(pm.getId(),labels,pm.getCPUs(),pm.getRAM(),
+                                   pm.getStorageCapacity(),pm.getStoragePerformance(),
+                                   pm.getNetworkCapacity(),pm.getNetworkPerformance(),
+                                   pm.getNetworkAddress());
+    }
+    return new DataCenter(pms,datacenter.getVirtualMachines(),datacenter.getConstraints()); //,datacenter.getPowerModel());
+  }
+
+  //----------------------------------------------------------
+  private static DataCenter updateVMLabels (DataCenter datacenter)
+  {
+    final VirtualMachine[] vms = datacenter.getVirtualMachines();
+    for (int i=0; i<vms.length; i++)
+    {
+      VirtualMachine vm = vms[i];
+      VirtualMachine.Label[] labels = getUpdatedVMLabels(vm);
+      vms[i] = new VirtualMachine(vm.getId(),labels,vm.getCPUs(),vm.getRAM(),
+                                  vm.getStorageCapacity(),vm.getStoragePerformance(),
+                                  vm.getNetworkCapacity(),vm.getNetworkPerformance());
+    }
+    return new DataCenter(datacenter.getPhysicalMachines(),vms,datacenter.getConstraints()); //,datacenter.getPowerModel());
+  }
+
+  //----------------------------------------------------------
+  private static DataCenter updateConstraints (DataCenter datacenter, Configuration configuration)
+  {
+    if (datacenter.getConstraints().length > 0)
+      throw new IllegalStateException("pre-existing constraints detected");
+
+    ArrayList<Constraint> list = new ArrayList<Constraint>();
+    // global constraints
+    list.add(NoCPUCoreOverCommitGlobalConstraint.SINGLETON);
+    list.add(NoRAMOverCommitGlobalConstraint.SINGLETON);
+    list.add(StorageReservationGlobalConstraint.getInstance(1));
+    // job type constraints
+    for (VirtualMachine vm : datacenter.getVirtualMachines())
+    {
+      if (vm.hasLabel(VMLABEL_REQUIRES_LOCAL_STORAGE))
+        list.add(PMLabelAffinityVirtualMachineConstraint.getInstance(vm.getId(),PMLABEL_HAS_LOCAL_STORAGE));
+      if (vm.hasLabel(VMLABEL_IOINTENSIVE))
+        list.add(VMLabelAntiAffinityVirtualMachineConstraint.getInstance(vm.getId(),VMLABEL_IOINTENSIVE));
+    }
+    // VM host migration constraints
+    for (VirtualMachine vm : datacenter.getVirtualMachines())
+    {
+      PhysicalMachine[] pms = datacenter.getPhysicalMachines(vm,configuration);
+      if (pms.length > 1)
+        throw new IllegalStateException("migrating VM detected: " + vm.getId());
+
+      if (pms.length > 0)
+      {
+        PhysicalMachine pm = pms[0];
+
+        // VM state constraints (immovable)
+        if (vm.hasLabel(VMLABEL_IMMOVABLE))
+          list.add(PMAffinityVirtualMachineConstraint.getInstance(vm.getId(),pm.getId()));
+
+        // architecture constraints
+        PhysicalMachine.Label labelArchitecture = getArchitectureLabel(pm);
+        if (labelArchitecture != null)
+          list.add(PMLabelAffinityVirtualMachineConstraint.getInstance(vm.getId(),labelArchitecture));
+        PhysicalMachine.Label labelNetworkSegment = getNetworkSegmentLabel(pm);
+        if (labelNetworkSegment != null)
+          list.add(PMLabelAffinityVirtualMachineConstraint.getInstance(vm.getId(),labelNetworkSegment));
+      }
+    }
+    Constraint[] constraints = list.toArray(new Constraint[list.size()]);
+
+    return new DataCenter(datacenter.getPhysicalMachines(),datacenter.getVirtualMachines(),constraints); //,datacenter.getPowerModel());
+  }
+
+
+  //----------------------------------------------------------
+  //----------------------------------------------------------
+  public static VirtualMachine setLabel (VirtualMachine vm, VirtualMachine.Label label)
+  {
+    if (vm.hasLabel(label))
+      return vm;
+
+    ArrayList<VirtualMachine.Label> list = new ArrayList<VirtualMachine.Label>();
+    list.addAll(Arrays.asList(vm.getLabels()));
+    list.add(label);
+    VirtualMachine.Label[] labels = list.toArray(new VirtualMachine.Label[list.size()]);
+    return new VirtualMachine(vm.getId(),labels,vm.getCPUs(),vm.getRAM(),
+                              vm.getStorageCapacity(),vm.getStoragePerformance(),
+                              vm.getNetworkCapacity(),vm.getNetworkPerformance());
+  }
+
+  //----------------------------------------------------------
+  private static int getIndex (VirtualMachine[] vms, VirtualMachine.Id vmId)
+  {
+    for (int i=0; i<vms.length; i++)
+      if (vms[i].getId().equals(vmId))
+        return i;
+    return -1;
+  }
+
+  //----------------------------------------------------------
+  public static DataCenter setLabel (DataCenter datacenter, VirtualMachine.Id vmId, VirtualMachine.Label label)
+  {
+    VirtualMachine[] vms = datacenter.getVirtualMachines();
+    int index = getIndex(vms,vmId);
+    if (index < 0)
+      throw new IllegalArgumentException(vmId.toString());
+
+    VirtualMachine vm = vms[index];
+    if (vm.hasLabel(label))
+      return datacenter;
+
+    vms[index] = setLabel(vm,label);
+
+    return new DataCenter(datacenter.getPhysicalMachines(),vms,datacenter.getConstraints()); //,datacenter.getPowerModel());
+  }
+
+  //----------------------------------------------------------
+  public static DataCenter updateLabelsAndConstraints (DataCenter datacenter, Configuration configuration)
+  {
+    datacenter = updatePMLabels(datacenter);
+    datacenter = updateVMLabels(datacenter);
+    datacenter = updateConstraints(datacenter,configuration);
+    return datacenter;
+  }
+}

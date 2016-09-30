@@ -1,0 +1,21 @@
+Manifest-Version: 1.0
+Bundle-ManifestVersion: 2
+Bundle-Name: CACTOS Optimisation Algorithm for Resource Control
+Bundle-SymbolicName: eu.cactosfp7.cactoopt.optimisationservice.resourcecontrol
+Bundle-Version: 1.0.0.qualifier
+Bundle-Activator: eu.cactosfp7.cactoopt.optimisationservice.resourcecontrol.Activator
+Bundle-Vendor: CACTOS Consortium
+Require-Bundle: eu.cactosfp7.cactoopt.optimisationservice;bundle-version="1.0.0",
+ org.apache.log4j;bundle-version="1.2.15",
+ eu.cactosfp7.infrastructuremodels,
+ org.eclipse.emf.common,
+ eu.cactosfp7.optimisationplan,
+ org.eclipse.emf.ecore,
+ org.apache.commons.httpclient,
+ eu.cactosfp7.cactoopt,
+ eu.cactosfp7.cactoopt.optimisationservice.registry,
+ JScience
+Bundle-RequiredExecutionEnvironment: JavaSE-1.7
+Service-Component: OSGI-INF/optimisationservice.xml
+Bundle-ActivationPolicy: lazy
+Export-Package: eu.cactosfp7.cactoopt.optimisationservice.resourcecontrol

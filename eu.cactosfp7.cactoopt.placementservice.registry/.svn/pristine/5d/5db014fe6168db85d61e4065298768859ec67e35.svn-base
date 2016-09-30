@@ -1,0 +1,17 @@
+package eu.cactosfp7.cactoopt.placementservice.registry;
+
+import eu.cactosfp7.cactoopt.placementservice.IPlacementService;
+
+public class PlacementServiceRegistry implements IPlacementService {
+
+    @Override
+    public String determinePlacement(String vmUuuid) {
+        IPlacementService service = PlacementSettings.SELECTED_PLACEMENT;
+        if(service == null){
+        	throw new RuntimeException("PlacementServiceRegistry cannot determinePlacement since no PlacementService is found!");
+        }
+        String nodeId = service.determinePlacement(vmUuuid);
+        return nodeId;
+    }
+
+}

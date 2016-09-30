@@ -1,0 +1,9 @@
+Manifest-Version: 1.0
+Bundle-ManifestVersion: 2
+Bundle-Name: Best-Fit Memory Placement Algorithm Service
+Bundle-SymbolicName: eu.cactosfp7.cactoopt.placementservice.bestfitmemory
+Bundle-Version: 1.0.0.qualifier
+Bundle-RequiredExecutionEnvironment: JavaSE-1.7
+Bundle-Vendor: CACTOS Consortium
+Require-Bundle: eu.cactosfp7.cactoopt.placementservice;bundle-version="1.0.0"
+Service-Component: OSGI-INF/component.xml

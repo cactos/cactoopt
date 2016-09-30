@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<scr:component xmlns:scr="http://www.osgi.org/xmlns/scr/v1.1.0" immediate="true" name="eu.cactosfp7.cactoopt.cyclicoptimiser.CyclicOptimiserClient">
+   <implementation class="eu.cactosfp7.cactoopt.cyclicoptimiser.CyclicOptimiserClient"/>
+   <reference bind="bindCdoSessionService" cardinality="1..1" interface="eu.cactosfp7.cdosession.service.CdoSessionService" name="CdoSessionService" policy="static" unbind="unbindCdoSessionService"/>
+   <reference bind="bindOptimisationService" cardinality="1..1" interface="eu.cactosfp7.cactoopt.optimisationservice.registry.OptimisationServiceRegistry" policy="static" unbind="unbindOptimisationService"/>
+   <reference bind="bindVmiService" cardinality="1..1" interface="eu.cactosfp7.vmi.controller.IVMIService" policy="static" unbind="unbindVmiService"/>
+   <service>
+      <provide interface="org.osgi.service.event.EventHandler"/>
+   </service>
+</scr:component>

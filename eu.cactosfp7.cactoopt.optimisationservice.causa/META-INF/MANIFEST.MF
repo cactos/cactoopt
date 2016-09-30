@@ -1,0 +1,15 @@
+Manifest-Version: 1.0
+Bundle-ManifestVersion: 2
+Bundle-Name: Causa Optimisation Service
+Bundle-SymbolicName: eu.cactosfp7.cactoopt.optimisationservice.causa
+Bundle-Version: 1.0.0.qualifier
+Bundle-Activator: eu.cactosfp7.cactoopt.optimisationservice.causa.Activator
+Bundle-Vendor: CACTOS Consortium
+Require-Bundle: eu.cactosfp7.cactoopt.optimisationservice;visibility:=reexport,
+ eu.cactosfp7.cactoopt;bundle-version="1.1.0",
+ eu.cactosfp7.optimisationplan,
+ eu.cactosfp7.infrastructuremodels
+Bundle-RequiredExecutionEnvironment: JavaSE-1.7
+Bundle-ActivationPolicy: lazy
+Service-Component: OSGI-INF/optimisationservice.xml
+Export-Package: eu.cactosfp7.cactoopt.optimisationservice.causa

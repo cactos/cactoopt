@@ -1,0 +1,16 @@
+Manifest-Version: 1.0
+Bundle-ManifestVersion: 2
+Bundle-Name: CactoOpt Placement
+Bundle-SymbolicName: eu.cactosfp7.cactoopt.placementservice
+Bundle-Version: 1.0.0.qualifier
+Bundle-Vendor: CACTOS Consortium
+Require-Bundle: org.eclipse.emf.cdo.net4j;visibility:=reexport,
+ eu.cactosfp7.cactoopt;visibility:=reexport,
+ eu.cactosfp7.optimisationplan;bundle-version="1.0.0";visibility:=reexport,
+ org.eclipse.osgi.services;visibility:=reexport,
+ eu.cactosfp7.cdosession,
+ eu.cactosfp7.cdosessionclient
+Bundle-RequiredExecutionEnvironment: JavaSE-1.7
+Export-Package: eu.cactosfp7.cactoopt.placementservice,
+ eu.cactosfp7.cactoopt.placementservice.config,
+ eu.cactosfp7.cactoopt.placementservice.impl

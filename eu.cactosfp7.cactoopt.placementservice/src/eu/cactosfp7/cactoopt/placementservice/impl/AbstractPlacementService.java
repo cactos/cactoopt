@@ -1,0 +1,141 @@
+package eu.cactosfp7.cactoopt.placementservice.impl;
+
+import java.util.ArrayList;
+import java.util.Dictionary;
+import java.util.List;
+import java.util.logging.Logger;
+
+import org.eclipse.emf.cdo.view.CDOView;
+import org.osgi.service.cm.ConfigurationException;
+import org.osgi.service.cm.ManagedService;
+
+import eu.cactosfp7.cactoopt.placementservice.IPlacementService;
+import eu.cactosfp7.cactoopt.placementservice.InitialPlacementAlgorithm;
+import eu.cactosfp7.cactoopt.placementservice.PlacementResult;
+import eu.cactosfp7.cactoopt.placementservice.PlacementResult.Status;
+import eu.cactosfp7.cactoopt.placementservice.config.IPlacementConfigurable;
+import eu.cactosfp7.cactoopt.util.CDOOptimisationPlanHandler;
+import eu.cactosfp7.cdosession.CactosCdoSession;
+import eu.cactosfp7.cdosession.settings.CactosUser;
+import eu.cactosfp7.cdosession.util.CdoHelper;
+import eu.cactosfp7.cdosessionclient.CdoSessionClient;
+import eu.cactosfp7.infrastructuremodels.load.logical.LogicalLoadModel;
+import eu.cactosfp7.infrastructuremodels.load.physical.PhysicalLoadModel;
+import eu.cactosfp7.infrastructuremodels.logicaldc.core.LogicalDCModel;
+import eu.cactosfp7.infrastructuremodels.logicaldc.core.VirtualMachine;
+import eu.cactosfp7.infrastructuremodels.physicaldc.core.PhysicalDCModel;
+import eu.cactosfp7.optimisationplan.OptimisationPlan;
+import eu.cactosfp7.optimisationplan.SequentialSteps;
+import eu.cactosfp7.optimisationplan.VmPlacementAction;
+
+/**
+ * Implementation of the placement service used to propose a placement of a node on a physical
+ * machine.
+ * 
+ * @author stier, jakub
+ *
+ */
+public abstract class AbstractPlacementService implements IPlacementService, ManagedService {
+	//private IOptimisationAlgorithm optimisationService;
+
+	/** The logger for this class. */
+	private static final Logger log = Logger.getLogger(AbstractPlacementService.class.getName());
+	
+	public AbstractPlacementService() {
+	}
+	
+	protected InitialPlacementAlgorithm placementAlgorithm;
+	protected IPlacementConfigurable configurable;
+	private CactosCdoSession cactosCdoSession;
+	
+    @Override
+    public PlacementResult determinePlacement(String vmUuuid) {
+    	PlacementResult.Status placementStatus; 
+    	
+    	this.cactosCdoSession = CdoSessionClient.INSTANCE.getService()
+                .getCactosCdoSession(CactosUser.CACTOOPT);
+    	log.info("CDO session [" + this.cactosCdoSession.toString() + "] opened.");
+                // fetch VM info from CDO server using the session
+
+        // determine placement using CactoOpt placement algorithms
+    	log.info("Determine placement for virtual machine [" + vmUuuid + "]");
+        
+// 		CDONet4jSession cdoSession = cactosCdoSession.getCdoSession();
+// 		CDOView view = cdoSession.openView();
+// 		CDOTransaction view = cdoSession.openTransaction();
+ 		CDOView view = this.cactosCdoSession.createView();
+ 		log.info("CDO view [" + view.toString() + "] opened.");
+ 		
+ 		LogicalDCModel ldcm = null;
+ 		PhysicalDCModel pdcm = null;
+ 		LogicalLoadModel llm = null;
+ 		PhysicalLoadModel plm = null;
+ 		OptimisationPlan plan = null;
+ 		List<VirtualMachine> vmsToPlace = new ArrayList<>();
+ 		String pmToPlace = null;
+ 		
+ 		// OPTYMISTIC APPROACH - run placement algorithm even if there is an optimisation plan in execution
+ 		// check if all plans are completed
+ 		//Boolean finished = CDOOptimisationPlanHandler.allPlansFinishedPlacement(transaction, cactosCdoSession.getOptimisationPlanPath());
+ 		boolean finished = CDOOptimisationPlanHandler.allPlansFinishedPlacement(this.cactosCdoSession);
+ 		
+ 		if (finished) {
+ 			ldcm = CDOOptimisationPlanHandler.loadLogicalDc(view, this.cactosCdoSession.getLogicalModelPath());
+ 			pdcm = CDOOptimisationPlanHandler.loadPhysicalDc(view, this.cactosCdoSession.getPhysicalModelPath());
+ 			llm = CDOOptimisationPlanHandler.loadLogicalLoad(view, this.cactosCdoSession.getLogicalLoadPath());
+ 			plm = CDOOptimisationPlanHandler.loadPhysicalLoad(view, this.cactosCdoSession.getPhysicalLoadPath());
+
+ 			VirtualMachine vm = CdoHelper.getVirtualMachineById(ldcm, vmUuuid);
+ 			
+ 			if (vm == null) {
+ 				log.warning("CdoHelper.getVirtualMachineById returned null for " + vmUuuid);
+ 				placementStatus = Status.FAILED_TRANSACTION_EXCEPTION;
+ 			} else {
+ 				try {
+	 				log.info("CdoHelper.getVirtualMachineById returned [ID=" + vm.getId() 
+	 				+ ", STATE=" + vm.getState() + "]");
+ 				} catch (Exception ex) {
+ 					log.warning("CdoHelper.getVirtualMachineById returned a VM but Id or State were missing!");
+ 				}
+
+ 	 	 		vmsToPlace.add(vm);
+ 	 			
+ 	 			plan = this.placementAlgorithm.generateOptimizationPlan(pdcm, ldcm, plm, llm, vmsToPlace);
+ 	 			if (plan != null) {
+ 	 				SequentialSteps rootStep = (SequentialSteps)plan.getOptimisationStep();
+ 	 				if (rootStep.getOptimisationSteps().size() > 0) {
+ 	 					VmPlacementAction placement = (VmPlacementAction) rootStep.getOptimisationSteps().get(0);
+ 	 					pmToPlace = placement.getTargetHost().getNode().getId();
+ 	 				}
+ 	 			}
+ 	 			
+ 	 			if (pmToPlace == null) {
+ 	 				placementStatus = Status.FAILED_IMPOSSIBLE;
+ 	 				log.warning("Placement Service was not able to determine a placement for ["
+ 	 						+ vmUuuid + "]");
+ 	 			} else {
+ 	 				placementStatus = Status.SUCCESSFUL;
+ 	 				log.info("Placement Service suggested to place [" + vmUuuid + "] on [" + pmToPlace + "]");
+ 	 			}
+ 			}
+ 		} else {
+ 			placementStatus = Status.FAILED_CONCURRENT_OPTIMISATION;
+ 			log.warning("Placement Service stopped: there is an optimisation plan in progress!");
+ 		}
+ 		
+		this.cactosCdoSession.closeConnection(view);
+		log.info("CDO view [" + view.toString() + "] closed.");
+        
+        return new PlacementResult(placementStatus, pmToPlace);
+    }
+    
+    public InitialPlacementAlgorithm getPlacementAlgorithm() {
+        return this.placementAlgorithm;
+    }
+    
+    @Override
+    public void updated(Dictionary<String, ?> properties) throws ConfigurationException {
+        this.configurable.updated(properties);
+    }
+    
+}

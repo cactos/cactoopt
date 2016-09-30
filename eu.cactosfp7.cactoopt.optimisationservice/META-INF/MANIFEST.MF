@@ -1,0 +1,12 @@
+Manifest-Version: 1.0
+Bundle-ManifestVersion: 2
+Bundle-Name: Optimisation Service
+Bundle-SymbolicName: eu.cactosfp7.cactoopt.optimisationservice
+Bundle-Version: 1.0.0.qualifier
+Bundle-Vendor: CACTOS Consortium
+Bundle-RequiredExecutionEnvironment: JavaSE-1.7
+Require-Bundle: eu.cactosfp7.optimisationplan;visibility:=reexport,
+ org.eclipse.osgi.services;visibility:=reexport,
+ org.eclipse.equinox.common;visibility:=reexport
+Export-Package: eu.cactosfp7.cactoopt.optimisationservice,
+ eu.cactosfp7.cactoopt.optimisationservice.config

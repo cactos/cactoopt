@@ -1,0 +1,14 @@
+Manifest-Version: 1.0
+Bundle-ManifestVersion: 2
+Bundle-Name: Placement Service Registry
+Bundle-SymbolicName: eu.cactosfp7.cactoopt.placementservice.registry
+Bundle-Version: 1.0.0.qualifier
+Bundle-Vendor: CACTOS Consortium
+Bundle-RequiredExecutionEnvironment: JavaSE-1.7
+Bundle-Activator: eu.cactosfp7.cactoopt.placementservice.registry.Activator
+Require-Bundle: eu.cactosfp7.cactoopt.placementservice;bundle-version="1.0.0";visibility:=reexport,
+ org.eclipse.osgi.services;visibility:=reexport
+Service-Component: OSGI-INF/component.xml,
+ OSGI-INF/placementsettings.xml
+Export-Package: eu.cactosfp7.cactoopt.placementservice.registry
+Bundle-ActivationPolicy: lazy

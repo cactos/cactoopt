@@ -1,0 +1,183 @@
+package eu.cactosfp7.cactoopt.behaviourinference.registry;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.StringTokenizer;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
+import org.osgi.framework.Constants;
+import org.osgi.framework.InvalidSyntaxException;
+import org.osgi.framework.ServiceEvent;
+import org.osgi.framework.ServiceListener;
+import org.osgi.framework.ServiceReference;
+
+import eu.cactosfp7.cactoopt.behaviourinference.IBehaviourInferenceAlgorithm;
+import eu.cactosfp7.infrastructuremodels.logicaldc.core.VMImage;
+import eu.cactosfp7.infrastructuremodels.logicaldc.core.VirtualMachine;
+import eu.cactosfp7.infrastructuremodels.physicaldc.architecturetype.ArchitectureTypeRepository;
+
+/**
+ * Registry for behaviour inference algorithms. Listens for services with the
+ * {@link IBehaviourInferenceAlgorithm} service interface.
+ * <p/>
+ * Use {@link #inferBehaviour(VirtualMachine)} to automatically call the
+ * appropriate algorithm based on the information in the registry. No behaviour
+ * inference algorithm is invoked if neither the {@link VirtualMachine} nor its
+ * linked {@link VMImage} have a behaviour tag associated to a behaviour
+ * inference algorithm.
+ * 
+ * @author groenda
+ *
+ */
+public class BehaviourInferenceAlgorithmRegistry implements ServiceListener, IBehaviourInferenceAlgorithm {
+	/** Logger for this class. */
+	private static final Logger logger = Logger.getLogger(BehaviourInferenceAlgorithmRegistry.class.getCanonicalName());
+
+	/** Name of the property denoting the tags that an algorithm supports. */
+	public static final String PROPERTY_TAGS = "tags";
+	/** Delimiters used to split the tags string into a set of tags. */
+	public static final String PROPERTY_TAGS_DELIMITERS = " ,;";
+    /** LDAP search filter for {@link IBehaviourInferenceAlgorithm} services. */
+	private static final String SERVICE_FILTER = "(" + Constants.OBJECTCLASS + "=" + IBehaviourInferenceAlgorithm.class.getName() + ")";
+
+	/** Registered services (including tags definition). */
+	private final Collection<ServiceReference<IBehaviourInferenceAlgorithm>> registeredServices;
+	/** Maps behaviour tags to registered behaviour inference algorithms. */
+	private final HashMap<String, IBehaviourInferenceAlgorithm> registeredAlgorithms;
+	
+	@SuppressWarnings("unchecked")
+	public BehaviourInferenceAlgorithmRegistry() {
+		registeredAlgorithms = new HashMap<String, IBehaviourInferenceAlgorithm>();
+		registeredServices = new ArrayList<ServiceReference<IBehaviourInferenceAlgorithm>>();
+		try {
+			// register existing services
+			ServiceReference<?>[] availableAlgorithms = Activator
+					.getContext().getServiceReferences(IBehaviourInferenceAlgorithm.class.getName(), SERVICE_FILTER);
+			if(availableAlgorithms != null) {
+			    for (ServiceReference<?> service : availableAlgorithms) {
+			        registerService((ServiceReference<IBehaviourInferenceAlgorithm>) service);
+			    }
+			} else {
+			    logger.log(Level.INFO, "No behaviour inference algorithms available yet during initialisation.");
+			}
+			Activator.getContext().addServiceListener(this, SERVICE_FILTER);
+		} catch (InvalidSyntaxException e) {
+			logger.log(Level.SEVERE, "Invalid specification of service filter in source code.", e);
+		}
+	}
+	
+	private void logSevereEmptyTag(ServiceReference<IBehaviourInferenceAlgorithm> service) {
+		logger.severe("Behaviour inference algorithms must have a non-empty tags property String. "
+				+ "Fix the service definition. "
+				+ "Service was registered by the bundle with the symbolic name: " 
+				+ service.getBundle().getSymbolicName() 
+				+ ".");
+	}
+	/**Registers a new behaviour inference algorithm service.
+	 * @param service The new service.
+	 */
+	private synchronized void registerService(ServiceReference<IBehaviourInferenceAlgorithm> service) {
+		// Error checks
+		Object tagsProperty = service.getProperty(PROPERTY_TAGS);
+		if (!(tagsProperty instanceof String)) {
+			logger.severe("Behaviour inference algorithms must have a tags property of type String. "
+					+ "Fix the service definition. "
+					+ "Service was registered by the bundle with the symbolic name: " 
+					+ service.getBundle().getSymbolicName() 
+					+ ".");
+			return;
+		}
+		if (((String)tagsProperty).isEmpty()) {
+			logSevereEmptyTag(service);
+			return;
+		}
+		// register
+		Collection<String> tags = new ArrayList<String>(); 
+		StringTokenizer tokenizer = new StringTokenizer((String)tagsProperty, PROPERTY_TAGS_DELIMITERS);
+		String tag;
+		String registeredTags = "";
+		while (tokenizer.hasMoreElements()) {
+			tag = tokenizer.nextToken();
+			if (!tag.isEmpty()) { 
+				tags.add(tag);
+				registeredTags = registeredTags + tag + ";";
+			} else {
+				logSevereEmptyTag(service);
+			}
+		}
+		IBehaviourInferenceAlgorithm algorithm = Activator.getContext().getService(service);
+		registerAlgorithm(tags, algorithm);
+		logger.info("Behaviour inference service successfully registered for tags '" 
+					+ registeredTags + "'(separated by ;). Symbolic name of registering bundle is " + service.getBundle().getSymbolicName());
+	}
+	
+	/**Unregisters a behaviour inference algorithm service.
+	 * @param service The service to remove.
+	 */
+	private synchronized void unregisterService(ServiceReference<IBehaviourInferenceAlgorithm> service) {
+		registeredServices.remove(service);
+		registeredAlgorithms.clear();
+		logger.info("Behaviour inference service successfully unregistered. Other services are registered again in case a prior existing tag was overwritten by the algorithm. Symbolic name of bundle is " + service.getBundle().getSymbolicName());
+		for (ServiceReference<IBehaviourInferenceAlgorithm> regSvs : registeredServices) {
+			registerService(regSvs);
+		}
+	}
+	
+	/**Registers an algorithm for the given tags.
+	 * @param tags Tags.
+	 * @param algorithm Algorithm.
+	 */
+	private void registerAlgorithm(Collection<String> tags, IBehaviourInferenceAlgorithm algorithm) {
+		for(String tag : tags) {
+			registeredAlgorithms.put(tag, algorithm);
+		}
+	}
+	
+	@Override
+    public void serviceChanged(ServiceEvent event) {
+		@SuppressWarnings("unchecked")
+		ServiceReference<IBehaviourInferenceAlgorithm> serviceReference = (ServiceReference<IBehaviourInferenceAlgorithm>) event
+				.getServiceReference();
+        if(serviceReference != null && event.getType() == ServiceEvent.REGISTERED) {
+        	registerService(serviceReference);
+        } else if(event.getType() == ServiceEvent.UNREGISTERING) {
+        	unregisterService(serviceReference);
+        }
+    }
+	
+	@Override
+	public void inferBehaviour(VirtualMachine vm, ArchitectureTypeRepository architectureTypeRepo) {
+		assert (vm != null);
+		String tag = vm.getInputParameters().get(eu.cactosfp7.cactoopt.behaviourinference.Constants.PROPERTY_VM_APPLICATION_TYPE_TAG);
+		registeredAlgorithms.get(tag).inferBehaviour(vm, architectureTypeRepo);
+	}
+
+	// Unit Testing Area
+	/**
+	 * @return all registered algorithms.
+	 */
+	public Collection<IBehaviourInferenceAlgorithm> getRegisteredAlgorithms() {
+		return registeredAlgorithms.values();
+	}
+	
+	/**
+	 * @return all registered tags, for which an behaviour inference algorithm is available.
+	 */
+	public Collection<String> getRegisteredTags() {
+		return registeredAlgorithms.keySet();
+	}
+	
+	/**
+	 * @return all registered services.
+	 */
+	public Collection<ServiceReference<IBehaviourInferenceAlgorithm>> getRegisteredServices() {
+		return Collections.unmodifiableCollection(registeredServices);
+	}
+
+
+}

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<scr:component xmlns:scr="http://www.osgi.org/xmlns/scr/v1.1.0" name="eu.cactosfp7.cactoopt.optimisationservice.linkernighan.LinKernighanOptimisationAlgorithmService">
+   <implementation class="eu.cactosfp7.cactoopt.optimisationservice.linkernighan.LinKernighanOptimisationAlgorithmService"/>
+   <property name="optimisationName" type="String" value="LinKernighan" />
+   <service>
+      <provide interface="eu.cactosfp7.cactoopt.optimisationservice.IOptimisationAlgorithm"/>
+      <provide interface="org.osgi.service.cm.ManagedService"/>
+   </service>
+   <property name="service.pid" type="String" value="cactoopt_opt_linkernighan"/>
+</scr:component>
