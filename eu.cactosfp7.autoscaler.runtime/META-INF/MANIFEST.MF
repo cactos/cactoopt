@@ -1,0 +1,10 @@
+Manifest-Version: 1.0
+Bundle-ManifestVersion: 2
+Bundle-Name: Runtime
+Bundle-SymbolicName: eu.cactosfp7.autoscaler.runtime
+Bundle-Version: 1.0.0.qualifier
+Bundle-Vendor: CACTOS Consortium
+Require-Bundle: eu.cactosfp7.autoscaler;bundle-version="1.0.0";visibility:=reexport,
+ eu.cactosfp7.infrastructuremodels
+Export-Package: eu.cactosfp7.autoscaler.runtime
+Bundle-RequiredExecutionEnvironment: JavaSE-1.7
