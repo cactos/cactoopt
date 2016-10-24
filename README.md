@@ -73,6 +73,10 @@ Configures the algorithm name *{OPTIMISATION_ALGORITHM_NAME}* that is used in **
 
     <property name="placementName" type="String" value="{OPTIMISATION_ALGORITHM_NAME}" />
     <property name="service.pid" type="String" value="{CONFIGURATION_FILE_NAME}"/>
+    
+To make CactoOpt using the new optimisation service modify the **cactoopt_optimisationalgorithm.cfg** by setting
+
+    algorithm = {OPTIMISATION_ALGORITHM_NAME}
 
 ## Placement
 
@@ -90,3 +94,7 @@ Configures the algorithm name *{PLACEMENT_ALGORITHM_NAME}* that is used in **cac
 
     <property name="placementName" type="String" value="{PLACEMENT_ALGORITHM_NAME}" />
     <property name="service.pid" type="String" value="{CONFIGURATION_FILE_NAME}"/>
+    
+To make CactoOpt using the new placement service modify the **cactoopt_placement.cfg** by setting
+
+    placementName = {PLACEMENT_ALGORITHM_NAME}
