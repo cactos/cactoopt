@@ -53,3 +53,28 @@ Sets the initial placement algorithm used by Causa placement service.
 The description of the placement algorithms is provided in D3.3 Extended Optimization Model (http://www.cactosfp7.eu/wp-content/uploads/2015/11/D3.3-Extended-Optimization-Model.pdf/ pp. 36--45).
 
 MOLPRO_* placement algorithms are aware of special requirements of Molpro jobs depending on the application type (e.g., dft jobs require a computational node with a local storage).
+
+# How to implement a new optimisation service
+In order to add new optimisation capabilities to CactoOpt one should create a new Java project that implements two interfaces and extends one abstract class.
+
+## Optimisation
+
+### abstract class AbstractOptimisationService
+The main class of the optimisation service, including references to the **IOptimisationAlgorithm** and **IOptimisationConfigurable**, as well as, implementing the logic of the OSGI ManagedService.
+
+### interface IOptimisationAlgorithm
+The actual logic of the optimisation service.
+
+### interface IOptimisationConfigurable
+Allows dynamic configuration changes in runtime.
+
+## Placement
+
+### abstract class AbstractPlacementService
+The main class of the placement service, including references to the **InitialPlacementAlgorithm** and **IPlacementConfigurable**, as well as, implementing the logic of the OSGI ManagedService.
+
+### interface InitialPlacementAlgorithm
+The actual logic of the placement service.
+
+### interface IPlacementConfigurable
+Allows dynamic configuration changes in runtime.
