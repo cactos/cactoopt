@@ -17,6 +17,8 @@ This configuration file allows to choose the optimisation service that will be u
     optimisationName = Causa, Random, LoadBalancing, Consolidation, LinKernighan
     autoscalerAlgorithmName = Hist, AKTE, Reg, or React
     resourceControlEnalbed = true, false
+    
+The description of the autoscaler algorithms is provided in D3.3 Extended Optimization Model (http://www.cactosfp7.eu/wp-content/uploads/2015/11/D3.3-Extended-Optimization-Model.pdf/ pp. 23--24).
 
 ### cactoopt_opt_causa.cfg
 *Relevant only if* optimisationName = Causa *in* **cactoopt_optimisationalgorithm.cfg**.
@@ -24,6 +26,10 @@ This configuration file allows to choose the optimisation service that will be u
 Sets the migration algorithm used by Causa optimisation service.
 
     algorithm = NONE, LOAD_BALANCING, CONSOLIDATION, ENERGY_EFFICIENCY, FRAGMENTATION, CP_LOAD_BALANCING, CP_CONSOLIDATION, GD_LOAD_BALANCING, HIGH_TO_LOW_LOAD_BALANCING, SINGLE_MIGRATION_LOAD_BALANCING, SINGLE_MIGRATION_CONSOLIDATION
+
+Enables / disables the control of powering up/down physical servers.
+
+    managePhysicalNodeActions = true, false
     
 The description of the migration algorithms is provided in D3.3 Extended Optimization Model (http://www.cactosfp7.eu/wp-content/uploads/2015/11/D3.3-Extended-Optimization-Model.pdf/ pp. 36--45).
 
