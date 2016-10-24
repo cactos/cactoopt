@@ -55,7 +55,7 @@ The description of the placement algorithms is provided in D3.3 Extended Optimiz
 MOLPRO_* placement algorithms are aware of special requirements of Molpro jobs depending on the application type (e.g., dft jobs require a computational node with a local storage).
 
 # How to implement a new optimisation service
-In order to add new optimisation capabilities to CactoOpt one should create a new Java project that implements two interfaces and extends one abstract class listed below.
+In order to add new optimisation capabilities to CactoOpt one should create a new Java project that implements two interfaces and extends one abstract class listed below. Additionally, one should configure the **component.xml** file in the **OSGI-INF** directory.
 
 ## Optimisation
 
@@ -68,6 +68,12 @@ The actual logic of the optimisation service.
 ### interface IOptimisationConfigurable
 Allows dynamic configuration changes in runtime.
 
+### OSGI-INF/component.xml
+Configures the algorithm name *{PLACEMENT_ALGORITHM_NAME}* that is used in **cactoopt_placement.cfg** file for placement algorithm selection and the configuration file *{CONFIGURATION_FILE_NAME}* that can specify additional algorithm-specific parameters.
+
+    <property name="placementName" type="String" value="{PLACEMENT_ALGORITHM_NAME}" />
+    <property name="service.pid" type="String" value="{CONFIGURATION_FILE_NAME}"/>
+
 ## Placement
 
 ### abstract class AbstractPlacementService
@@ -78,3 +84,9 @@ The actual logic of the placement service.
 
 ### interface IPlacementConfigurable
 Allows dynamic configuration changes in runtime.
+
+### OSGI-INF/component.xml
+Configures the algorithm name *{OPTIMISATION_ALGORITHM_NAME}* that is used in **cactoopt_optimisationalgorithm.cfg** file for optimisation algorithm selection and the configuration file *{CONFIGURATION_FILE_NAME}* that can specify additional algorithm-specific parameters.
+
+    <property name="placementName" type="String" value="{OPTIMISATION_ALGORITHM_NAME}" />
+    <property name="service.pid" type="String" value="{CONFIGURATION_FILE_NAME}"/>
