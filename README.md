@@ -69,9 +69,9 @@ The actual logic of the optimisation service.
 Allows dynamic configuration changes in runtime.
 
 ### OSGI-INF/component.xml
-Configures the algorithm name *{PLACEMENT_ALGORITHM_NAME}* that is used in **cactoopt_placement.cfg** file for placement algorithm selection and the configuration file *{CONFIGURATION_FILE_NAME}* that can specify additional algorithm-specific parameters.
+Configures the algorithm name *{OPTIMISATION_ALGORITHM_NAME}* that is used in **cactoopt_optimisationalgorithm.cfg** file for optimisation algorithm selection and the configuration file *{CONFIGURATION_FILE_NAME}* that can specify additional algorithm-specific parameters.
 
-    <property name="placementName" type="String" value="{PLACEMENT_ALGORITHM_NAME}" />
+    <property name="placementName" type="String" value="{OPTIMISATION_ALGORITHM_NAME}" />
     <property name="service.pid" type="String" value="{CONFIGURATION_FILE_NAME}"/>
 
 ## Placement
@@ -86,7 +86,7 @@ The actual logic of the placement service.
 Allows dynamic configuration changes in runtime.
 
 ### OSGI-INF/component.xml
-Configures the algorithm name *{OPTIMISATION_ALGORITHM_NAME}* that is used in **cactoopt_optimisationalgorithm.cfg** file for optimisation algorithm selection and the configuration file *{CONFIGURATION_FILE_NAME}* that can specify additional algorithm-specific parameters.
+Configures the algorithm name *{PLACEMENT_ALGORITHM_NAME}* that is used in **cactoopt_placement.cfg** file for placement algorithm selection and the configuration file *{CONFIGURATION_FILE_NAME}* that can specify additional algorithm-specific parameters.
 
-    <property name="placementName" type="String" value="{OPTIMISATION_ALGORITHM_NAME}" />
+    <property name="placementName" type="String" value="{PLACEMENT_ALGORITHM_NAME}" />
     <property name="service.pid" type="String" value="{CONFIGURATION_FILE_NAME}"/>
