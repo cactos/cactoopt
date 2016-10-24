@@ -55,7 +55,7 @@ The description of the placement algorithms is provided in D3.3 Extended Optimiz
 MOLPRO_* placement algorithms are aware of special requirements of Molpro jobs depending on the application type (e.g., dft jobs require a computational node with a local storage).
 
 # How to implement a new optimisation service
-In order to add new optimisation capabilities to CactoOpt one should create a new Java project that implements two interfaces and extends one abstract class.
+In order to add new optimisation capabilities to CactoOpt one should create a new Java project that implements two interfaces and extends one abstract class listed below.
 
 ## Optimisation
 
