@@ -31,6 +31,13 @@ Enables / disables the control of powering up/down physical servers.
 
     managePhysicalNodeActions = true, false
     
+If the control of powering up/down is enabled, the further configuration is possible by setting the following variables:
+    
+    minServersOn = 2
+    numberOfEmptyServersPoweredOn = 1
+    
+*minServersOn* specify the minimum number of servers that shall be alwasy powered up and *numberOfEmptyServersPoweredOn* defines the size of the buffer of empty machines that shall be powered up in order to keep available resources for new virtual machines.
+    
 The description of the migration algorithms is provided in D3.3 Extended Optimization Model (http://www.cactosfp7.eu/wp-content/uploads/2015/11/D3.3-Extended-Optimization-Model.pdf/ pp. 36--45).
 
 ## Placement
@@ -52,7 +59,7 @@ Sets the initial placement algorithm used by Causa placement service.
 
 The description of the placement algorithms is provided in D3.3 Extended Optimization Model (http://www.cactosfp7.eu/wp-content/uploads/2015/11/D3.3-Extended-Optimization-Model.pdf/ pp. 36--45).
 
-MOLPRO_* placement algorithms are aware of special requirements of Molpro jobs depending on the application type (e.g., dft jobs require a computational node with a local storage).
+MOLPRO\_\* placement algorithms are aware of special requirements of Molpro jobs depending on the application type (e.g., dft jobs require a computational node with a local storage).
 
 # How to implement a new optimisation service
 In order to add new optimisation capabilities to CactoOpt one should create a new Java project that implements two interfaces and extends one abstract class listed below. Additionally, one should configure the **component.xml** file in the **OSGI-INF** directory.
