@@ -18,7 +18,7 @@ This configuration file allows to choose the optimisation service that will be u
     autoscalerAlgorithmName = Hist, AKTE, Reg, or React
     resourceControlEnalbed = true, false
     
-The description of the autoscaler algorithms is provided in D3.3 Extended Optimization Model (http://www.cactosfp7.eu/wp-content/uploads/2015/11/D3.3-Extended-Optimization-Model.pdf/ pp. 23--24).
+The description of the autoscaler algorithms is provided in D3.3 Extended Optimization Model (http://www.cactosfp7.eu/wp-content/uploads/2015/11/D3.3-Extended-Optimization-Model.pdf pp. 23--24).
 
 ### cactoopt_opt_causa.cfg
 *Relevant only if* optimisationName = Causa *in* **cactoopt_optimisationalgorithm.cfg**.
@@ -38,7 +38,7 @@ If the control of powering up/down is enabled, the further configuration is poss
     
 *minServersOn* specify the minimum number of servers that shall be alwasy powered up and *numberOfEmptyServersPoweredOn* defines the size of the buffer of empty machines that shall be powered up in order to keep available resources for new virtual machines.
     
-The description of the migration algorithms is provided in D3.3 Extended Optimization Model (http://www.cactosfp7.eu/wp-content/uploads/2015/11/D3.3-Extended-Optimization-Model.pdf/ pp. 36--45).
+The description of the migration algorithms is provided in D3.3 Extended Optimization Model (http://www.cactosfp7.eu/wp-content/uploads/2015/11/D3.3-Extended-Optimization-Model.pdf pp. 36--45).
 
 ## Placement
 The main configuration file for optimisation is **cactoopt_placement.cfg**. Other configuration files (if apply) are relevant only for particular placement services.
@@ -57,7 +57,7 @@ Sets the initial placement algorithm used by Causa placement service.
     LOAD_BALANCING_RAM, CONSOLIDATION_RAM, CONSOLIDATION, FRAGMENTATION, ENERGY_EFFICIENCY,
     MOLPRO_BEST_FIT, MOLPRO_LOAD_BALANCING_RAM, MOLPRO_CONSOLIDATION_RAM
 
-The description of the placement algorithms is provided in D3.3 Extended Optimization Model (http://www.cactosfp7.eu/wp-content/uploads/2015/11/D3.3-Extended-Optimization-Model.pdf/ pp. 36--45).
+The description of the placement algorithms is provided in D3.3 Extended Optimization Model (http://www.cactosfp7.eu/wp-content/uploads/2015/11/D3.3-Extended-Optimization-Model.pdf pp. 36--45).
 
 MOLPRO\_\* placement algorithms are aware of special requirements of Molpro jobs depending on the application type (e.g., dft jobs require a computational node with a local storage).
 
